@@ -2,6 +2,7 @@ package main
 
 import (
         "fmt"
+        "io/ioutil"
         "log"
         "net/http"
         "os"
@@ -9,11 +10,12 @@ import (
 
 func handler(w http.ResponseWriter, r *http.Request) {
         log.Print("Hello world received a request.")
-        target := os.Getenv("TARGET")
-        if target == "" {
-                target = "World"
+	body, err := ioutil.ReadFile("static/index.html")
+        if err != nil {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+                return
         }
-        fmt.Fprintf(w, "Hello %s!\n", target)
+        w.Write(body)
 }
 
 func main() {
