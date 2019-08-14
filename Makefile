@@ -1,3 +1,5 @@
+test:
+	go test -v
 
 gcloud-build:
 	gcloud builds submit --tag gcr.io/dht-test-249818/dht-test
