@@ -126,7 +126,7 @@ func timed(lines *[]string, s string, f func()) time.Duration {
 	t1 := time.Now()
 	f()
 	td := time.Since(t1)
-	line := fmt.Sprintf("%s runtime: %v", s, td)
+	line := fmt.Sprintf("%s runtime: %vms", s, td.Nanoseconds() / (1000*1000))
 	fmt.Println(line)
 	*lines = append(*lines, line)
 	return td
