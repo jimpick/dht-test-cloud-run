@@ -25,4 +25,5 @@ COPY --from=builder /go/src/github.com/jimpick/dht-test-cloud-run/static /dht-te
 # Run the web service on container startup.
 WORKDIR /dht-test
 EXPOSE 8099
+ENV LIBP2P_ALLOW_WEAK_RSA_KEYS=1
 CMD ["/dht-test/dht-test"]
