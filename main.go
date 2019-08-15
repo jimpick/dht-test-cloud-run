@@ -34,7 +34,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 
 	var lines []string
 	var ns []*dhttests.Node
-	n := 10
+	n := 20
 
 	timed(&lines, "setup", func() {
 		ns = nodes(n)
