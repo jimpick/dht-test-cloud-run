@@ -1,18 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	dhttests "github.com/jimpick/dht-test-cloud-run/dht"
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	log.Print("Home page request.")
 	body, err := ioutil.ReadFile("static/index.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -22,22 +25,52 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func testHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		log.Print("Test request.")
-
-		var ns []*dhttests.Node
-		n := 5
-
-		timed("setup", func() {
-			ns = nodes(n)
-		})
-		for i := 1; i < n; i++ {
-			fmt.Printf("%v %v\n", i, ns[i].Host.ID())
-		}
-		io.WriteString(w, "Hello from /test!\n")
-	} else {
+	if r.Method != "POST" {
 		http.Error(w, "404 not found.", http.StatusNotFound)
+		return
 	}
+
+	log.Print("Test request.")
+
+	var lines []string
+	var ns []*dhttests.Node
+	n := 10
+
+	timed(&lines, "setup", func() {
+		ns = nodes(n)
+	})
+	for i := 0; i < n; i++ {
+		fmt.Printf("%v %v\n", i, ns[i].Host.ID())
+		line := fmt.Sprintf("%v %v", i, ns[i].Host.ID())
+		lines = append(lines, line)
+	}
+
+	dsch := make(chan time.Duration, n)
+	for i := 1; i < n; i++ {
+		go func(i int) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			var err error
+			d := timed(&lines, fmt.Sprintf("n0 -> n%d", i), func() {
+				_, err = ns[0].DHT.FindPeer(ctx, ns[i].Host.ID())
+			})
+			if err != nil {
+				line := fmt.Sprintf("n0 failed to find n%d. %v", i, err)
+				fmt.Println(line)
+				lines = append(lines, line)
+			}
+			dsch <- d
+		}(i)
+	}
+	for i := 1; i < n; i++ {
+		<-dsch
+	}
+	for i := 0; i < n; i++ {
+		ns[i].Host.Close()
+	}
+
+	lines = append(lines, "")
+	io.WriteString(w, strings.Join(lines, "\n"))
 }
 
 func main() {
@@ -48,7 +81,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8099"
 	}
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -68,6 +101,11 @@ func nodes(n int) []*dhttests.Node {
 	ch := make(chan *dhttests.Node, n)
 	for i := 0; i < n; i++ {
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println("Recovered", r)
+				}
+			}()
 			ch <- node()
 		}()
 	}
@@ -85,10 +123,12 @@ func nodes(n int) []*dhttests.Node {
 	return ns
 }
 
-func timed(s string, f func()) time.Duration {
+func timed(lines *[]string, s string, f func()) time.Duration {
 	t1 := time.Now()
 	f()
 	td := time.Since(t1)
-	fmt.Printf("%s runtime: %v\n", s, td)
+	line := fmt.Sprintf("%s runtime: %v", s, td)
+	fmt.Println(line)
+	*lines = append(*lines, line)
 	return td
 }

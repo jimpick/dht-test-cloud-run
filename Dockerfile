@@ -24,4 +24,5 @@ COPY --from=builder /go/src/github.com/jimpick/dht-test-cloud-run/static /dht-te
 
 # Run the web service on container startup.
 WORKDIR /dht-test
+EXPOSE 8099
 CMD ["/dht-test/dht-test"]

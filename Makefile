@@ -2,6 +2,8 @@ test:
 	go test -v
 
 gcloud-build:
+	go mod tidy
+	go mod vendor
 	gcloud builds submit --tag gcr.io/dht-test-249818/dht-test
 
 gcloud-deploy:
