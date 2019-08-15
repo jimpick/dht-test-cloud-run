@@ -74,8 +74,6 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.Print("Web server started.")
-
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/test", testHandler)
 
@@ -84,6 +82,7 @@ func main() {
 		port = "8099"
 	}
 
+	log.Printf("Web server started on port: %s\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 }
 
