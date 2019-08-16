@@ -35,6 +35,18 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Print("Test request.")
 
+	/*
+		if os.Getenv("GOOGLE") != "" && os.Getenv("K_CONFIGURATION") != "" {
+			// lwriter.Configure(lwriter.Output(&LogShim{getStackdriverLogger()}))
+			// logging.SetLogLevel("dht", "DEBUG")
+			logger := getStackdriverLogger()
+			logger.Println("test request")
+		} else {
+			lwriter.Configure(lwriter.Output(&LogShim{log.New(os.Stderr, "", log.Lshortfile)}))
+			logging.SetLogLevel("dht", "DEBUG")
+		}
+	*/
+
 	var lines []string
 	var ns []*dhttests.Node
 	n := 2
@@ -100,9 +112,16 @@ func main() {
 	*/
 	// lwriter.Configure(lwriter.Output(os.Stderr))
 	// lwriter.WriterGroup.AddWriter(os.Stderr)
+
 	if os.Getenv("GOOGLE") != "" && os.Getenv("K_CONFIGURATION") != "" {
 		lwriter.Configure(lwriter.Output(&LogShim{getStackdriverLogger()}))
 		logging.SetLogLevel("dht", "DEBUG")
+		/*
+			logger := log.New(os.Stderr, "", log.Lshortfile)
+			logger.Println("started 4")
+			logger2 := getStackdriverLogger()
+			logger2.Println("hello world 3.1")
+		*/
 	} else {
 		lwriter.Configure(lwriter.Output(&LogShim{log.New(os.Stderr, "", log.Lshortfile)}))
 		logging.SetLogLevel("dht", "DEBUG")
@@ -177,7 +196,7 @@ func getStackdriverLogger() *log.Logger {
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
-	defer client.Close()
+	// defer client.Close()
 
 	// Sets the name of the log to write to.
 	logName := "dht"
@@ -186,6 +205,6 @@ func getStackdriverLogger() *log.Logger {
 
 	// Logs "hello world", log entry is visible at
 	// Stackdriver Logs.
-	logger.Println("hello world")
+	logger.Println("hello world 4")
 	return logger
 }
