@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"time"
 
 	levelds "github.com/ipfs/go-ds-leveldb"
 	ipfsconfig "github.com/ipfs/go-ipfs-config"
@@ -71,7 +72,14 @@ func Bootstrap(n *Node) error {
 		}
 	}
 
-	err := n.DHT.Bootstrap(ctx)
+	cfg := dht.BootstrapConfig{
+		Queries: 1,
+		Period:  time.Duration(5 * time.Minute),
+		Timeout: time.Duration(10 * time.Second),
+	}
+
+	// err := n.DHT.Bootstrap(ctx)
+	err := n.DHT.BootstrapWithConfig(ctx, cfg)
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	logging "github.com/ipfs/go-log"
 	dhttests "github.com/jimpick/dht-test-cloud-run/dht"
 )
 
@@ -34,7 +35,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 
 	var lines []string
 	var ns []*dhttests.Node
-	n := 20
+	n := 2
 
 	timed(&lines, "setup", func() {
 		ns = nodes(n)
@@ -48,7 +49,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 	dsch := make(chan time.Duration, n)
 	for i := 1; i < n; i++ {
 		go func(i int) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			var err error
 			d := timed(&lines, fmt.Sprintf("n0 -> n%d", i), func() {
@@ -74,6 +75,8 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	logging.SetLogLevel("dht", "DEBUG")
+
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/test", testHandler)
 
@@ -126,7 +129,7 @@ func timed(lines *[]string, s string, f func()) time.Duration {
 	t1 := time.Now()
 	f()
 	td := time.Since(t1)
-	line := fmt.Sprintf("%s runtime: %vms", s, td.Nanoseconds() / (1000*1000))
+	line := fmt.Sprintf("%s runtime: %vms", s, td.Nanoseconds()/(1000*1000))
 	fmt.Println(line)
 	*lines = append(*lines, line)
 	return td
