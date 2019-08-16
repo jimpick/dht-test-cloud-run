@@ -17,3 +17,6 @@ gcloud-deploy:
 
 gcloud-list-services:
 	gcloud beta run services list --platform managed
+
+deploy: gcloud-build
+	make gcloud-deploy

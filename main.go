@@ -151,6 +151,7 @@ func timed(lines *[]string, s string, f func()) time.Duration {
 }
 
 func testLog() {
+	fmt.Println("testLog 1")
 	ctx := context.Background()
 
 	// Sets your Google Cloud Platform project ID.
@@ -171,4 +172,5 @@ func testLog() {
 	// Logs "hello world", log entry is visible at
 	// Stackdriver Logs.
 	logger.Println("hello world")
+	fmt.Println("testLog 2")
 }
