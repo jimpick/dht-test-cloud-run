@@ -26,4 +26,5 @@ COPY --from=builder /go/src/github.com/jimpick/dht-test-cloud-run/static /dht-te
 WORKDIR /dht-test
 EXPOSE 8099
 ENV LIBP2P_ALLOW_WEAK_RSA_KEYS=1
+ENV IPFS_LOGGING_FMT=nocolor
 CMD ["/dht-test/dht-test"]

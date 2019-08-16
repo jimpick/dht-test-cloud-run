@@ -1,5 +1,5 @@
 run:
-	LIBP2P_ALLOW_WEAK_RSA_KEYS=1 go run main.go
+	LIBP2P_ALLOW_WEAK_RSA_KEYS=1 IPFS_LOGGING_FMT=nocolor go run main.go
 
 test:
 	go test -v

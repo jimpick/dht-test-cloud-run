@@ -12,6 +12,7 @@ import (
 	"time"
 
 	logging "github.com/ipfs/go-log"
+	lwriter "github.com/ipfs/go-log/writer"
 	dhttests "github.com/jimpick/dht-test-cloud-run/dht"
 )
 
@@ -75,7 +76,16 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// logging.Configure()
+	logfile, err := os.Create("log.out")
+	if err != nil {
+		panic(err)
+	}
+	// w := bufio.NewWriter(logfile)
+	// lwriter.Configure(lwriter.Output(w))
+	lwriter.Configure(lwriter.Output(logfile))
 	logging.SetLogLevel("dht", "DEBUG")
+	// lwriter.WriterGroup.AddWriter(os.Stderr)
 
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/test", testHandler)
