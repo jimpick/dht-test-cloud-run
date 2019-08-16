@@ -1,6 +1,7 @@
 module github.com/jimpick/dht-test-cloud-run
 
 require (
+	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/ipfs/go-ds-leveldb v0.0.2
 	github.com/ipfs/go-ipfs-config v0.0.6
 	github.com/ipfs/go-ipns v0.0.1
@@ -11,4 +12,5 @@ require (
 	github.com/libp2p/go-libp2p-host v0.1.0
 	github.com/libp2p/go-libp2p-kad-dht v0.1.1
 	github.com/libp2p/go-libp2p-record v0.1.1
+	google.golang.org/api v0.8.0 // indirect
 )

@@ -11,9 +11,10 @@ import (
 	"strings"
 	"time"
 
-	logging "github.com/ipfs/go-log"
-	lwriter "github.com/ipfs/go-log/writer"
+	// logging "github.com/ipfs/go-log"
+	// lwriter "github.com/ipfs/go-log/writer"
 	dhttests "github.com/jimpick/dht-test-cloud-run/dht"
+	glogging "cloud.google.com/go/logging"
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +77,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// logging.Configure()
+	/*
 	logfile, err := os.Create("log.out")
 	if err != nil {
 		panic(err)
@@ -86,6 +87,10 @@ func main() {
 	lwriter.Configure(lwriter.Output(logfile))
 	logging.SetLogLevel("dht", "DEBUG")
 	// lwriter.WriterGroup.AddWriter(os.Stderr)
+	*/
+	if (os.Getenv("GOOGLE") != "" && os.Getenv("K_CONFIGURATION") != "") {
+		testLog()
+	}
 
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/test", testHandler)
@@ -143,4 +148,27 @@ func timed(lines *[]string, s string, f func()) time.Duration {
 	fmt.Println(line)
 	*lines = append(*lines, line)
 	return td
+}
+
+func testLog() {
+	ctx := context.Background()
+
+	// Sets your Google Cloud Platform project ID.
+	projectID := "dht-test-249818"
+
+	// Creates a client.
+	client, err := glogging.NewClient(ctx, projectID)
+	if err != nil {
+					log.Fatalf("Failed to create client: %v", err)
+	}
+	defer client.Close()
+
+	// Sets the name of the log to write to.
+	logName := "my-log"
+
+	logger := client.Logger(logName).StandardLogger(glogging.Info)
+
+	// Logs "hello world", log entry is visible at
+	// Stackdriver Logs.
+	logger.Println("hello world")
 }
