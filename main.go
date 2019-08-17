@@ -108,6 +108,24 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		ns[i].Host.Close()
 	}
 
+	if trace != "" {
+		lines = append(lines, "https://console.cloud.google.com/logs/viewer?"+
+			"authuser=1&organizationId=882980064372&project=dht-test-249818&"+
+			"minLogLevel=0&expandAll=false&"+
+			"timestamp=2019-08-17T04:04:27.313542520Z&"+
+			"customFacets=&limitCustomFacetWidth=true&"+
+			"dateRangeStart=2019-08-17T03:32:36.762Z&"+
+			"interval=PT1H&resource=project%2Fproject_id%2Fdht-test-249818&"+
+			"scrollTimestamp=2019-08-17T04:31:26.141887534Z&"+
+			"logName=projects%2Fdht-test-249818%2Flogs%2Fdht&"+
+			"advancedFilter=resource.type%3D%22project%22%0A"+
+			"resource.labels.project_id%3D%22dht-test-249818%22%0A"+
+			"logName%3D%22projects%2Fdht-test-249818%2Flogs%2Fdht%22%0A"+
+			"labels.trace%3D%22"+
+			trace+
+			// "330438a0b7b19d7cdf7a94dd0a0713b5%2F3255878610758515717;o%3D1" +
+			"%22&dateRangeEnd=2019-08-17T04:32:36.762Z")
+	}
 	lines = append(lines, "")
 	io.WriteString(w, strings.Join(lines, "\n"))
 }
