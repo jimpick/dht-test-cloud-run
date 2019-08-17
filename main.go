@@ -15,7 +15,41 @@ import (
 	logging "github.com/ipfs/go-log"
 	lwriter "github.com/ipfs/go-log/writer"
 	dhttests "github.com/jimpick/dht-test-cloud-run/dht"
+	gologging "github.com/whyrusleeping/go-logging"
 )
+
+// LogShim reads the IPFS logs and sends them to StackDriver
+type LogShim struct {
+	logger *log.Logger
+}
+
+func (ls *LogShim) Write(p []byte) (n int, err error) {
+	// fmt.Println("Jim LogShim Write", len(p))
+	// fmt.Printf("Jim LogShim Write %v", string(p))
+	ls.logger.Print(string(p))
+	return len(p), nil
+}
+
+func setupLogging(logID string, trace string) {
+	var stdLogger *log.Logger
+	if glogClient != nil {
+		var logger *glogging.Logger
+		if trace != "" {
+			labelsOpt := glogging.CommonLabels(map[string]string{
+				"trace": trace,
+			})
+			logger = glogClient.Logger(logID, labelsOpt)
+		}
+		stdLogger = logger.StandardLogger(glogging.Info)
+	} else {
+		stdLogger = log.New(os.Stderr, "", log.Lshortfile)
+	}
+	lwriter.Configure(lwriter.Output(&LogShim{stdLogger}))
+	logging.SetAllLoggers(gologging.ERROR)
+	logging.SetLogLevel("dht", "DEBUG")
+}
+
+var glogClient *glogging.Client
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Print("Home page request.")
@@ -33,19 +67,9 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Print("Test request.")
-
-	/*
-		if os.Getenv("GOOGLE") != "" && os.Getenv("K_CONFIGURATION") != "" {
-			// lwriter.Configure(lwriter.Output(&LogShim{getStackdriverLogger()}))
-			// logging.SetLogLevel("dht", "DEBUG")
-			logger := getStackdriverLogger()
-			logger.Println("test request")
-		} else {
-			lwriter.Configure(lwriter.Output(&LogShim{log.New(os.Stderr, "", log.Lshortfile)}))
-			logging.SetLogLevel("dht", "DEBUG")
-		}
-	*/
+	trace := r.Header.Get("X-Cloud-Trace-Context")
+	log.Print("Test request ", trace)
+	setupLogging("dht", trace)
 
 	var lines []string
 	var ns []*dhttests.Node
@@ -88,43 +112,9 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, strings.Join(lines, "\n"))
 }
 
-// LogShim reads the IPFS logs and sends them to StackDriver
-type LogShim struct {
-	logger *log.Logger
-}
-
-func (ls *LogShim) Write(p []byte) (n int, err error) {
-	// fmt.Println("Jim LogShim Write", len(p))
-	// fmt.Printf("Jim LogShim Write %v", string(p))
-	ls.logger.Print(string(p))
-	return len(p), nil
-}
-
 func main() {
-	/*
-		logfile, err := os.Create("log.out")
-		if err != nil {
-			panic(err)
-		}
-		// w := bufio.NewWriter(logfile)
-		// lwriter.Configure(lwriter.Output(w))
-		lwriter.Configure(lwriter.Output(logfile))
-	*/
-	// lwriter.Configure(lwriter.Output(os.Stderr))
-	// lwriter.WriterGroup.AddWriter(os.Stderr)
-
 	if os.Getenv("GOOGLE") != "" && os.Getenv("K_CONFIGURATION") != "" {
-		lwriter.Configure(lwriter.Output(&LogShim{getStackdriverLogger()}))
-		logging.SetLogLevel("dht", "DEBUG")
-		/*
-			logger := log.New(os.Stderr, "", log.Lshortfile)
-			logger.Println("started 4")
-			logger2 := getStackdriverLogger()
-			logger2.Println("hello world 3.1")
-		*/
-	} else {
-		lwriter.Configure(lwriter.Output(&LogShim{log.New(os.Stderr, "", log.Lshortfile)}))
-		logging.SetLogLevel("dht", "DEBUG")
+		glogClient = getStackdriverLogClient()
 	}
 
 	http.HandleFunc("/", handler)
@@ -185,7 +175,7 @@ func timed(lines *[]string, s string, f func()) time.Duration {
 	return td
 }
 
-func getStackdriverLogger() *log.Logger {
+func getStackdriverLogClient() *glogging.Client {
 	ctx := context.Background()
 
 	// Sets your Google Cloud Platform project ID.
@@ -196,15 +186,6 @@ func getStackdriverLogger() *log.Logger {
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
-	// defer client.Close()
 
-	// Sets the name of the log to write to.
-	logName := "dht"
-
-	logger := client.Logger(logName).StandardLogger(glogging.Info)
-
-	// Logs "hello world", log entry is visible at
-	// Stackdriver Logs.
-	logger.Println("hello world 4")
-	return logger
+	return client
 }
