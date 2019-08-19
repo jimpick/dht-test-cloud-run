@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/profiler"
 	glogging "cloud.google.com/go/logging"
 	logging "github.com/ipfs/go-log"
 	lwriter "github.com/ipfs/go-log/writer"
@@ -133,6 +134,18 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	if os.Getenv("GOOGLE") != "" && os.Getenv("K_CONFIGURATION") != "" {
 		glogClient = getStackdriverLogClient()
+		// Profiler initialization, best done as early as possible.
+		if err := profiler.Start(profiler.Config{
+			Service:        "dht-test-2",
+			ServiceVersion: "1.0.0",
+			DebugLogging: true,
+			// MutexProfiling: true,
+			// ProjectID must be set if not running on GCP.
+			// ProjectID: "my-project",
+		}); err != nil {
+			fmt.Println("Profiler error", err)
+			// TODO: Handle error.
+		}
 	}
 
 	http.HandleFunc("/", handler)
