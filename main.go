@@ -16,7 +16,7 @@ import (
 	logging "github.com/ipfs/go-log"
 	lwriter "github.com/ipfs/go-log/writer"
 	dhttests "github.com/jimpick/dht-test-cloud-run/dht"
-	gologging "github.com/whyrusleeping/go-logging"
+	// gologging "github.com/whyrusleeping/go-logging"
 )
 
 // LogShim reads the IPFS logs and sends them to StackDriver
@@ -25,14 +25,24 @@ type LogShim struct {
 }
 
 func (ls *LogShim) Write(p []byte) (n int, err error) {
+	line := strings.Split(string(p), " ")
+	date := line[0]
+	time := line[1]
+	level := line[2]
+	subsystem := line[3]
+	payload := strings.Join(line[2:], " ")
 	if ls.glogger == nil {
 		fmt.Print(string(p))
 	} else {
 		ls.glogger.Log(glogging.Entry{
 			Labels: map[string]string{
-				"type": "log",
+				"type":      "log",
+				"date":      date,
+				"time":      time,
+				"level":     level,
+				"subsystem": subsystem,
 			},
-			Payload: string(p),
+			Payload: payload,
 		})
 	}
 	return len(p), nil
@@ -64,18 +74,19 @@ func (es *EventShim) Close() error {
 	return nil
 }
 
-func setupLogging(logID string, trace string) {
+func setupLogging(trace string) {
 	var glogger *glogging.Logger
 	if glogClient != nil {
 		labelsOpt := glogging.CommonLabels(map[string]string{
 			"trace": trace,
 		})
-		glogger = glogClient.Logger(logID, labelsOpt)
+		glogger = glogClient.Logger("dht", labelsOpt)
 	}
 	lwriter.Configure(lwriter.Output(&LogShim{glogger}))
 	lwriter.WriterGroup.AddWriter(&EventShim{glogger})
-	logging.SetAllLoggers(gologging.ERROR)
-	logging.SetLogLevel("dht", "DEBUG")
+	// logging.SetAllLoggers(gologging.ERROR)
+	// logging.SetLogLevel("dht", "DEBUG")
+	logging.SetDebugLogging()
 }
 
 var glogClient *glogging.Client
@@ -98,7 +109,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 
 	trace := r.Header.Get("X-Cloud-Trace-Context")
 	log.Print("Test request ", trace)
-	setupLogging("dht", trace)
+	setupLogging(trace)
 
 	var lines []string
 	var ns []*dhttests.Node
@@ -136,6 +147,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < n; i++ {
 		ns[i].Host.Close()
 	}
+	setupLogging(trace + " finished") // Continue logging until next request
 
 	if trace != "" {
 		lines = append(lines, "https://console.cloud.google.com/logs/viewer?"+
