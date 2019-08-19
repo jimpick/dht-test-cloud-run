@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -46,12 +47,14 @@ func (es *EventShim) Write(p []byte) (n int, err error) {
 	if es.glogger == nil {
 		fmt.Print("Event: ", string(p))
 	} else {
-		es.glogger.Log(glogging.Entry{
-			Labels: map[string]string{
-				"type": "event",
-			},
-			Payload: string(p),
-		})
+		if err == nil {
+			es.glogger.Log(glogging.Entry{
+				Labels: map[string]string{
+					"type": "event",
+				},
+				Payload: json.RawMessage(p),
+			})
+		}
 	}
 	return len(p), nil
 }
