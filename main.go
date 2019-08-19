@@ -20,31 +20,57 @@ import (
 
 // LogShim reads the IPFS logs and sends them to StackDriver
 type LogShim struct {
-	logger *log.Logger
+	glogger *glogging.Logger
 }
 
 func (ls *LogShim) Write(p []byte) (n int, err error) {
-	// fmt.Println("Jim LogShim Write", len(p))
-	// fmt.Printf("Jim LogShim Write %v", string(p))
-	ls.logger.Print(string(p))
+	if ls.glogger == nil {
+		fmt.Print(string(p))
+	} else {
+		ls.glogger.Log(glogging.Entry{
+			Labels: map[string]string{
+				"type": "log",
+			},
+			Payload: string(p),
+		})
+	}
 	return len(p), nil
 }
 
-func setupLogging(logID string, trace string) {
-	var stdLogger *log.Logger
-	if glogClient != nil {
-		var logger *glogging.Logger
-		if trace != "" {
-			labelsOpt := glogging.CommonLabels(map[string]string{
-				"trace": trace,
-			})
-			logger = glogClient.Logger(logID, labelsOpt)
-		}
-		stdLogger = logger.StandardLogger(glogging.Info)
+// EventShim gets IPFS events and sends them to StackDriver
+type EventShim struct {
+	glogger *glogging.Logger
+}
+
+func (es *EventShim) Write(p []byte) (n int, err error) {
+	if es.glogger == nil {
+		fmt.Print("Event: ", string(p))
 	} else {
-		stdLogger = log.New(os.Stderr, "", log.Lshortfile)
+		es.glogger.Log(glogging.Entry{
+			Labels: map[string]string{
+				"type": "event",
+			},
+			Payload: string(p),
+		})
 	}
-	lwriter.Configure(lwriter.Output(&LogShim{stdLogger}))
+	return len(p), nil
+}
+
+// Close closes
+func (es *EventShim) Close() error {
+	return nil
+}
+
+func setupLogging(logID string, trace string) {
+	var glogger *glogging.Logger
+	if glogClient != nil {
+		labelsOpt := glogging.CommonLabels(map[string]string{
+			"trace": trace,
+		})
+		glogger = glogClient.Logger(logID, labelsOpt)
+	}
+	lwriter.Configure(lwriter.Output(&LogShim{glogger}))
+	lwriter.WriterGroup.AddWriter(&EventShim{glogger})
 	logging.SetAllLoggers(gologging.ERROR)
 	logging.SetLogLevel("dht", "DEBUG")
 }
@@ -112,19 +138,14 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		lines = append(lines, "https://console.cloud.google.com/logs/viewer?"+
 			"authuser=1&organizationId=882980064372&project=dht-test-249818&"+
 			"minLogLevel=0&expandAll=false&"+
-			"timestamp=2019-08-17T04:04:27.313542520Z&"+
 			"customFacets=&limitCustomFacetWidth=true&"+
-			"dateRangeStart=2019-08-17T03:32:36.762Z&"+
-			"interval=PT1H&resource=project%2Fproject_id%2Fdht-test-249818&"+
-			"scrollTimestamp=2019-08-17T04:31:26.141887534Z&"+
+			"interval=PT1H&"+
+			"resource=project%2Fproject_id%2Fdht-test-249818&"+
 			"logName=projects%2Fdht-test-249818%2Flogs%2Fdht&"+
 			"advancedFilter=resource.type%3D%22project%22%0A"+
 			"resource.labels.project_id%3D%22dht-test-249818%22%0A"+
-			"logName%3D%22projects%2Fdht-test-249818%2Flogs%2Fdht%22%0A"+
 			"labels.trace%3D%22"+
-			trace+
-			// "330438a0b7b19d7cdf7a94dd0a0713b5%2F3255878610758515717;o%3D1" +
-			"%22&dateRangeEnd=2019-08-17T04:32:36.762Z")
+			trace+"%22")
 	}
 	lines = append(lines, "")
 	io.WriteString(w, strings.Join(lines, "\n"))
