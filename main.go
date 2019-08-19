@@ -16,6 +16,7 @@ import (
 	logging "github.com/ipfs/go-log"
 	lwriter "github.com/ipfs/go-log/writer"
 	dhttests "github.com/jimpick/dht-test-cloud-run/dht"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	// gologging "github.com/whyrusleeping/go-logging"
 )
 
@@ -32,7 +33,7 @@ func (ls *LogShim) Write(p []byte) (n int, err error) {
 	subsystem := line[3]
 	payload := strings.Join(line[2:], " ")
 	if ls.glogger == nil {
-		fmt.Print(string(p))
+		// fmt.Print(string(p))
 	} else {
 		ls.glogger.Log(glogging.Entry{
 			Labels: map[string]string{
@@ -55,7 +56,7 @@ type EventShim struct {
 
 func (es *EventShim) Write(p []byte) (n int, err error) {
 	if es.glogger == nil {
-		fmt.Print("Event: ", string(p))
+		// fmt.Print("Event: ", string(p))
 	} else {
 		if err == nil {
 			es.glogger.Log(glogging.Entry{
@@ -113,7 +114,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 
 	var lines []string
 	var ns []*dhttests.Node
-	n := 2
+	n := 1
 
 	timed(&lines, "setup", func() {
 		ns = nodes(n)
@@ -124,25 +125,22 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		lines = append(lines, line)
 	}
 
-	dsch := make(chan time.Duration, n)
-	for i := 1; i < n; i++ {
-		go func(i int) {
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			defer cancel()
-			var err error
-			d := timed(&lines, fmt.Sprintf("n0 -> n%d", i), func() {
-				_, err = ns[0].DHT.FindPeer(ctx, ns[i].Host.ID())
-			})
-			if err != nil {
-				line := fmt.Sprintf("n0 failed to find n%d. %v", i, err)
-				fmt.Println(line)
-				lines = append(lines, line)
-			}
-			dsch <- d
-		}(i)
-	}
-	for i := 1; i < n; i++ {
-		<-dsch
+	targetPeer, err := peer.IDB58Decode("QmScdku7gc3VvfZZvT8kHU77bt6bnH3PnGXkyFRZ17g9EG")
+	if err == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		var err error
+		d := timed(&lines, fmt.Sprintf("n0 -> target %v", targetPeer), func() {
+			_, err = ns[0].DHT.FindPeer(ctx, targetPeer)
+		})
+		lines = append(lines, fmt.Sprintf("duration: %v", d))
+		if err != nil {
+			line := fmt.Sprintf("n0 failed to find target %v. %v", targetPeer, err)
+			fmt.Println(line)
+			lines = append(lines, line)
+		}
+	} else {
+		lines = append(lines, fmt.Sprintf("Peer ID err: %v", err))
 	}
 	for i := 0; i < n; i++ {
 		ns[i].Host.Close()
