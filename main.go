@@ -84,6 +84,8 @@ func setupLogging(trace string) {
 		glogger = glogClient.Logger("dht", labelsOpt)
 	}
 	lwriter.Configure(lwriter.Output(&LogShim{glogger}))
+	lwriter.WriterGroup.Close()
+	lwriter.WriterGroup = lwriter.NewMirrorWriter()
 	lwriter.WriterGroup.AddWriter(&EventShim{glogger})
 	// logging.SetAllLoggers(gologging.ERROR)
 	// logging.SetLogLevel("dht", "DEBUG")
