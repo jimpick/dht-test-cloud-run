@@ -15,7 +15,8 @@ import (
 	glogging "cloud.google.com/go/logging"
 	logging "github.com/ipfs/go-log"
 	lwriter "github.com/ipfs/go-log/writer"
-	dhttests "github.com/jimpick/dht-test-cloud-run/dht"
+	// dhttests "github.com/jimpick/dht-test-cloud-run/dht"
+	dhttests "github.com/jimpick/dht-test-cloud-run/dhtnode"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	// gologging "github.com/whyrusleeping/go-logging"
 )
@@ -184,7 +185,9 @@ func main() {
 }
 
 func node() *dhttests.Node {
-	n, err := dhttests.NewNode()
+	cfg := dhttests.DefaultNodeCfg()
+	cfg.Bootstrap = dhttests.BootstrapAddrs
+	n, err := dhttests.NewNode(cfg)
 	if err != nil {
 		panic(err)
 	}
