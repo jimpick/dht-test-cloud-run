@@ -17,8 +17,14 @@ import (
 	lwriter "github.com/ipfs/go-log/writer"
 	dhttests "github.com/jimpick/dht-test-cloud-run/dht"
 	peer "github.com/libp2p/go-libp2p-core/peer"
+
 	// gologging "github.com/whyrusleeping/go-logging"
+	"contrib.go.opencensus.io/exporter/stackdriver"
+	"go.opencensus.io/trace"
 )
+
+// Sets your Google Cloud Platform project ID.
+var projectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
 
 // LogShim reads the IPFS logs and sends them to StackDriver
 type LogShim struct {
@@ -167,9 +173,14 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	if os.Getenv("GOOGLE") != "" && os.Getenv("K_CONFIGURATION") != "" {
-		glogClient = getStackdriverLogClient()
-	}
+	// if os.Getenv("GOOGLE") != "" && os.Getenv("K_CONFIGURATION") != "" {
+	fmt.Println("Google project:", projectID)
+	glogClient = getStackdriverLogClient()
+	sd := setupStackdriverOpenCensusExporter()
+	defer sd.Flush()
+	trace.RegisterExporter(sd)
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+	// }
 
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/test", testHandler)
@@ -229,11 +240,18 @@ func timed(lines *[]string, s string, f func()) time.Duration {
 	return td
 }
 
+func setupStackdriverOpenCensusExporter() *stackdriver.Exporter {
+	sd, err := stackdriver.NewExporter(stackdriver.Options{
+		ProjectID: projectID,
+	})
+	if err != nil {
+		log.Fatalf("Failed to create the Stackdriver exporter: %v", err)
+	}
+	return sd
+}
+
 func getStackdriverLogClient() *glogging.Client {
 	ctx := context.Background()
-
-	// Sets your Google Cloud Platform project ID.
-	projectID := "dht-test-249818"
 
 	// Creates a client.
 	client, err := glogging.NewClient(ctx, projectID)
