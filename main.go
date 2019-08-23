@@ -19,6 +19,7 @@ import (
 	dhttests "github.com/jimpick/dht-test-cloud-run/dhtnode"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	// gologging "github.com/whyrusleeping/go-logging"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
 )
 
 // LogShim reads the IPFS logs and sends them to StackDriver
@@ -128,7 +129,8 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		lines = append(lines, line)
 	}
 
-	targetPeer, err := peer.IDB58Decode("QmScdku7gc3VvfZZvT8kHU77bt6bnH3PnGXkyFRZ17g9EG")
+	targetPeer, err := peer.IDB58Decode("QmScdku7gc3VvfZZvT8kHU77bt6bnH3PnGXkyFRZ17g9EG") // home.jimpick.com
+	// targetPeer, err := peer.IDB58Decode("QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ") // mars.i.ipfs.io
 	if err == nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
@@ -168,6 +170,9 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	dht.AlphaValue = 10
+	fmt.Println("AlphaValue:", dht.AlphaValue)
+
 	if os.Getenv("GOOGLE") != "" && os.Getenv("K_CONFIGURATION") != "" {
 		glogClient = getStackdriverLogClient()
 	}
@@ -215,8 +220,8 @@ func nodes(n int) []*dhttests.Node {
 	ns := make([]*dhttests.Node, n)
 	for i := 0; i < n; i++ {
 		ns[i] = <-ch
-		fmt.Printf("%d ", i) // no newline
-		// PrintLatencyTable(ns[i].Host)
+		fmt.Printf("Latency %d ", i) // no newline
+		dhttests.PrintLatencyTable(os.Stdout, ns[i].Host)
 	}
 	fmt.Printf("bootstrapped %d nodes\n", n)
 	return ns

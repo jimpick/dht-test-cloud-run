@@ -40,7 +40,7 @@ var BootstrapAddrsStr = []string{
 var BootstrapAddrs []peer.AddrInfo
 
 func init() {
-	dht.AlphaValue = 15
+	dht.AlphaValue = 10
 	fmt.Println("AlphaValue:", dht.AlphaValue)
 	ais, err := ipfsconfig.ParseBootstrapPeers(BootstrapAddrsStr)
 	if err != nil {

@@ -22,3 +22,5 @@ replace github.com/libp2p/go-libp2p-kad-dht => github.com/mplaza/go-libp2p-kad-d
 replace github.com/ipfs/go-todocounter => github.com/mplaza/go-todocounter v0.0.2-0.20190725020157-00bbee7a40b2
 
 replace github.com/libp2p/go-libp2p-core => github.com/libp2p/go-libp2p-core v0.2.1-0.20190815235124-d29813389b68
+
+replace github.com/libp2p/go-libp2p => github.com/libp2p/go-libp2p v0.2.0-0.20190628095754-ccf9943938b9
