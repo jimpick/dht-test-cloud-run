@@ -140,20 +140,26 @@ func handleVisData(w http.ResponseWriter, r *http.Request) {
 			`AND labels.type="event"`,
 		traceID)
 	it := client.Entries(ctx, logadmin.Filter(filter))
+	var entries []*logging.Entry
+	var nextTok string
+
 	marshaller := jsonpb.Marshaler{}
 	for {
-		entry, err := it.Next()
+		var err error
+		nextTok, err = iterator.NewPager(it, 500, nextTok).NextPage(&entries)
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
 			panic("Error")
 		}
-		if s, ok := entry.Payload.(*structpb.Struct); ok {
-			payload := s
-			data, err := marshaller.MarshalToString(payload)
-			if err == nil {
-				fmt.Fprintf(w, "data: %s\n\n", data)
+		for _, entry := range entries {
+			if s, ok := entry.Payload.(*structpb.Struct); ok {
+				payload := s
+				data, err := marshaller.MarshalToString(payload)
+				if err == nil {
+					fmt.Fprintf(w, "data: %s\n\n", data)
+				}
 			}
 		}
 	}
