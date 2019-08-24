@@ -15,6 +15,7 @@ import (
 	"cloud.google.com/go/logging/logadmin"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
+	"github.com/rs/cors"
 	"google.golang.org/api/iterator"
 )
 
@@ -45,15 +46,17 @@ func main() {
 		log.Fatalf("creating logging client: %v", err)
 	}
 
-	http.HandleFunc("/entries", handleEntries)
-	http.HandleFunc("/vis-data/", handleVisData)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/entries", handleEntries)
+	mux.HandleFunc("/vis-data/", handleVisData)
+	handler := cors.Default().Handler(mux)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8011"
 	}
 
 	log.Print("listening on ", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), handler))
 }
 
 var pageTemplate = template.Must(template.New("").Parse(`

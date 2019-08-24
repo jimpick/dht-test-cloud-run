@@ -14,6 +14,7 @@ require (
 	github.com/libp2p/go-libp2p-quic-transport v0.1.1
 	github.com/libp2p/go-libp2p-record v0.1.1
 	github.com/multiformats/go-multiaddr v0.0.4
+	github.com/rs/cors v1.7.0 // indirect
 	google.golang.org/api v0.8.0
 )
 
