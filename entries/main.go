@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/logging"
 	"cloud.google.com/go/logging/logadmin"
@@ -21,9 +22,10 @@ var (
 )
 
 type parsedEntry struct {
-	Entry    *logging.Entry
-	DateTime string
-	TraceID  string
+	Entry     *logging.Entry
+	DateTime  string
+	TraceID   string
+	StartTime string
 }
 
 func main() {
@@ -49,12 +51,14 @@ func main() {
 
 var pageTemplate = template.Must(template.New("").Parse(`
 <table>
-  {{range .Entries}}
+  {{range $i, $v := .Entries}}
     <tr>
         <td>
-            {{.DateTime}} {{.TraceID}}
-            <a href="https://console.cloud.google.com/logs/viewer?authuser=0&project=dht-test-249818&minLogLevel=0&expandAll=false&timestamp=2019-08-24T07:15:45.499000000Z&customFacets=&limitCustomFacetWidth=true&interval=NO_LIMIT&resource=project&scrollTimestamp=2019-08-23T20:46:33.361358546Z&advancedFilter=resource.type%3D%22project%22%0Alabels.trace%3D%22{{.TraceID}}%22%0Alabels.type%3D%22log%22">Logs</a>
-            <a href="https://console.cloud.google.com/logs/viewer?authuser=0&project=dht-test-249818&minLogLevel=0&expandAll=false&timestamp=2019-08-24T07:15:45.499000000Z&customFacets=&limitCustomFacetWidth=true&interval=NO_LIMIT&resource=project&scrollTimestamp=2019-08-23T20:46:33.361358546Z&advancedFilter=resource.type%3D%22project%22%0Alabels.trace%3D%22{{.TraceID}}%22%0Alabels.type%3D%22event%22">Events</a>
+            {{$i}} {{.DateTime}}
+            <a href="https://console.cloud.google.com/logs/viewer?authuser=0&project=dht-test-249818&minLogLevel=0&expandAll=false&customFacets=&limitCustomFacetWidth=true&interval=JUMP_TO_TIME&resource=cloud_run_revision%2Fservice_name%2Fdht-test-2&dateRangeStart={{.StartTime}}&timestamp={{.StartTime}}&advancedFilter=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22dht-test-2%22%0AlogName%3D%22projects%2Fdht-test-249818%2Flogs%2Frun.googleapis.com%252Fstderr%22%20OR%20logName%3D%22projects%2Fdht-test-249818%2Flogs%2Frun.googleapis.com%252Fstdout%22%0Alabels.instanceId%3D%22{{.Entry.Labels.instanceId}}%22&dateRangeEnd=2019-08-24T21:18:43.000Z&scrollTimestamp={{.StartTime}}" target="_blank">Instance</a>
+            <a href="https://console.cloud.google.com/logs/viewer?authuser=0&project=dht-test-249818&minLogLevel=0&expandAll=false&timestamp=2019-08-24T07:15:45.499000000Z&customFacets=&limitCustomFacetWidth=true&interval=NO_LIMIT&resource=project&scrollTimestamp=2019-08-23T20:46:33.361358546Z&advancedFilter=resource.type%3D%22project%22%0Alabels.trace%3D%22{{.TraceID}}%22%0Alabels.type%3D%22log%22" target="_blank">Logs</a>
+            <a href="https://console.cloud.google.com/logs/viewer?authuser=0&project=dht-test-249818&minLogLevel=0&expandAll=false&timestamp=2019-08-24T07:15:45.499000000Z&customFacets=&limitCustomFacetWidth=true&interval=NO_LIMIT&resource=project&scrollTimestamp=2019-08-23T20:46:33.361358546Z&advancedFilter=resource.type%3D%22project%22%0Alabels.trace%3D%22{{.TraceID}}%22%0Alabels.type%3D%22event%22" target="_blank">Events</a>
+            {{.TraceID}}
         </td>
     </tr>
   {{end}}
@@ -76,7 +80,7 @@ func handleEntries(w http.ResponseWriter, r *http.Request) {
 		*projectID)
 	it := client.Entries(ctx, logadmin.Filter(filter))
 	var entries []*logging.Entry
-	nextTok, err := iterator.NewPager(it, 20, r.URL.Query().Get("pageToken")).NextPage(&entries)
+	nextTok, err := iterator.NewPager(it, 1000, r.URL.Query().Get("pageToken")).NextPage(&entries)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("problem getting the next page: %v", err), http.StatusInternalServerError)
 		return
@@ -90,9 +94,10 @@ func handleEntries(w http.ResponseWriter, r *http.Request) {
 			panic("Wrong type")
 		}
 		parsedEntries[i] = parsedEntry{
-			Entry:    entry,
-			DateTime: values[0] + " " + values[1],
-			TraceID:  values[4],
+			Entry:     entry,
+			DateTime:  values[0] + " " + values[1],
+			TraceID:   values[4],
+			StartTime: entry.Timestamp.Format(time.RFC3339),
 		}
 	}
 
@@ -103,9 +108,12 @@ func handleEntries(w http.ResponseWriter, r *http.Request) {
 		parsedEntries,
 		nextTok,
 	}
-	for i, v := range data.Entries {
-		fmt.Println("Jim", i, v.TraceID)
-	}
+	/*
+			for i, v := range data.Entries {
+				// fmt.Println("Jim", i, v.TraceID, v.Entry.Labels["instanceId"])
+				fmt.Println("Jim", i, v.StartTime)
+		    }
+	*/
 	var buf bytes.Buffer
 	if err := pageTemplate.Execute(&buf, data); err != nil {
 		http.Error(w, fmt.Sprintf("problem executing page template: %v", err), http.StatusInternalServerError)
