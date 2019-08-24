@@ -3,11 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -18,7 +18,7 @@ import (
 
 var (
 	client    *logadmin.Client
-	projectID = flag.String("project-id", "", "ID of the project to use")
+	projectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
 )
 
 type parsedEntry struct {
@@ -34,19 +34,23 @@ func main() {
 	// complete web server that displays pages of log entries. To run it as a
 	// standalone program, rename both the package and this function to "main".
 	ctx := context.Background()
-	flag.Parse()
-	if *projectID == "" {
-		log.Fatal("-project-id missing")
+	if projectID == "" {
+		log.Fatal("GOOGLE_CLOUD_PROJECT missing env")
 	}
 	var err error
-	client, err = logadmin.NewClient(ctx, *projectID)
+	client, err = logadmin.NewClient(ctx, projectID)
 	if err != nil {
 		log.Fatalf("creating logging client: %v", err)
 	}
 
 	http.HandleFunc("/entries", handleEntries)
-	log.Print("listening on 8011")
-	log.Fatal(http.ListenAndServe(":8011", nil))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8011"
+	}
+
+	log.Print("listening on ", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 }
 
 var pageTemplate = template.Must(template.New("").Parse(`
@@ -77,7 +81,7 @@ func handleEntries(w http.ResponseWriter, r *http.Request) {
 			`AND "Test request" `+
 			`AND timestamp > "2019-08-23T13:10:00-07:00" `+
 			`AND timestamp < "2019-08-23T13:50:00-07:00"`,
-		*projectID)
+		projectID)
 	it := client.Entries(ctx, logadmin.Filter(filter))
 	var entries []*logging.Entry
 	nextTok, err := iterator.NewPager(it, 1000, r.URL.Query().Get("pageToken")).NextPage(&entries)
