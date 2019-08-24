@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -14,6 +13,8 @@ import (
 
 	"cloud.google.com/go/logging"
 	"cloud.google.com/go/logging/logadmin"
+	"github.com/golang/protobuf/jsonpb"
+	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/api/iterator"
 )
 
@@ -139,6 +140,7 @@ func handleVisData(w http.ResponseWriter, r *http.Request) {
 			`AND labels.type="event"`,
 		traceID)
 	it := client.Entries(ctx, logadmin.Filter(filter))
+	marshaller := jsonpb.Marshaler{}
 	for {
 		entry, err := it.Next()
 		if err == iterator.Done {
@@ -147,9 +149,12 @@ func handleVisData(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic("Error")
 		}
-		data, err := json.Marshal(entry.Payload)
-		if err == nil {
-			fmt.Fprintf(w, "data: %v\n\n", string(data))
+		if s, ok := entry.Payload.(*structpb.Struct); ok {
+			payload := s
+			data, err := marshaller.MarshalToString(payload)
+			if err == nil {
+				fmt.Fprintf(w, "data: %s\n\n", data)
+			}
 		}
 	}
 }
