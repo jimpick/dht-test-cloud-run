@@ -87,8 +87,8 @@ func handleEntries(w http.ResponseWriter, r *http.Request) {
 		// `resource.labels.service_name="%s" `+
 		`logName = "projects/%s/logs/run.googleapis.com%%2Fstderr" `+
 			`AND "Test request" `+
-			`AND timestamp > "2019-08-23T13:10:00-07:00" `+
-			`AND timestamp < "2019-08-23T13:50:00-07:00"`,
+			`AND timestamp > "2019-09-03T18:30:03-07:00" `+
+			`AND timestamp < "2019-09-03T21:15:03-07:00"`,
 		projectID)
 	it := client.Entries(ctx, logadmin.Filter(filter))
 	var entries []*logging.Entry
