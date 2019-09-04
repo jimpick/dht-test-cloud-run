@@ -15,10 +15,12 @@ import (
 	glogging "cloud.google.com/go/logging"
 	logging "github.com/ipfs/go-log"
 	lwriter "github.com/ipfs/go-log/writer"
+
 	// dhttests "github.com/jimpick/dht-test-cloud-run/dht"
 	dhttests "github.com/jimpick/dht-test-cloud-run/dhtnode"
-	peer "github.com/libp2p/go-libp2p-core/peer"
 	// gologging "github.com/whyrusleeping/go-logging"
+	cid "github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/peer"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 )
 
@@ -129,20 +131,45 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		lines = append(lines, line)
 	}
 
-	targetPeer, err := peer.IDB58Decode("QmScdku7gc3VvfZZvT8kHU77bt6bnH3PnGXkyFRZ17g9EG") // home.jimpick.com
+	// targetContent, err := cid.Decode("QmX3g1tW8cZX7fQD9VPFx1zpWNtGDAqX8bse8Hg2Nak9G3") // protocol.ai
+	targetContent, err := cid.Decode("Qmbsb7MMCveTEdfeTjCJPssJmPwbN2jfGyUDSo8oPfk9mB") // ipfs.io
+	// targetContent, err := cid.Decode("QmbynpFBGvNygCJQPVKxb8hDmXCumtBPLdiTbSxA8vTE8x") // docs.ipfs.io
+	// targetPeer, err := peer.IDB58Decode("QmScdku7gc3VvfZZvT8kHU77bt6bnH3PnGXkyFRZ17g9EG") // home.jimpick.com
 	// targetPeer, err := peer.IDB58Decode("QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ") // mars.i.ipfs.io
 	if err == nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		var err error
-		d := timed(&lines, fmt.Sprintf("n0 -> target %v", targetPeer), func() {
-			_, err = ns[0].DHT.FindPeer(ctx, targetPeer)
+		/*
+			d := timed(&lines, fmt.Sprintf("n0 -> target %v", targetPeer), func() {
+				_, err = ns[0].DHT.FindPeer(ctx, targetPeer)
+			})
+		*/
+		var addrInfos []peer.AddrInfo
+		d := timed(&lines, fmt.Sprintf("n0 -> providers for cid %v", targetContent), func() {
+			addrInfos, err = ns[0].DHT.FindProviders(ctx, targetContent)
 		})
-		lines = append(lines, fmt.Sprintf("duration: %v", d))
-		if err != nil {
-			line := fmt.Sprintf("n0 failed to find target %v. %v", targetPeer, err)
-			fmt.Println(line)
+		line := fmt.Sprintf("duration: %v", d)
+		lines = append(lines, line)
+		fmt.Printf(line)
+		if err == nil {
+			line := fmt.Sprintf("Number of results: %v", len(addrInfos))
 			lines = append(lines, line)
+			fmt.Printf(line)
+			for _, addrInfo := range addrInfos {
+				line := fmt.Sprintf("  Addr: %v", addrInfo.ID)
+				lines = append(lines, line)
+				fmt.Printf(line)
+				for _, maddr := range addrInfo.Addrs {
+					line := fmt.Sprintf("    %v", maddr)
+					lines = append(lines, line)
+					fmt.Printf(line)
+				}
+			}
+		} else {
+			line := fmt.Sprintf("n0 failed to find %v. %v", targetContent, err)
+			lines = append(lines, line)
+			fmt.Println(line)
 		}
 	} else {
 		lines = append(lines, fmt.Sprintf("Peer ID err: %v", err))

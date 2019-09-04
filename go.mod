@@ -2,6 +2,7 @@ module github.com/jimpick/dht-test-cloud-run
 
 require (
 	cloud.google.com/go v0.38.0
+	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-ds-leveldb v0.0.2
 	github.com/ipfs/go-ipfs-config v0.0.6
 	github.com/ipfs/go-ipns v0.0.1
@@ -14,8 +15,7 @@ require (
 	github.com/libp2p/go-libp2p-quic-transport v0.1.1
 	github.com/libp2p/go-libp2p-record v0.1.1
 	github.com/multiformats/go-multiaddr v0.0.4
-	github.com/rs/cors v1.7.0 // indirect
-	google.golang.org/api v0.8.0
+	google.golang.org/api v0.8.0 // indirect
 )
 
 replace github.com/libp2p/go-libp2p-kad-dht => github.com/mplaza/go-libp2p-kad-dht v0.1.2-0.20190813193048-e439e7d2eab8
