@@ -79,7 +79,7 @@ func (es *EventShim) Close() error {
 	return nil
 }
 
-func setupLogging(trace string) {
+func setupLogging(trace string) *glogging.Logger {
 	var glogger *glogging.Logger
 	if glogClient != nil {
 		labelsOpt := glogging.CommonLabels(map[string]string{
@@ -94,6 +94,7 @@ func setupLogging(trace string) {
 	// logging.SetAllLoggers(gologging.ERROR)
 	// logging.SetLogLevel("dht", "DEBUG")
 	logging.SetDebugLogging()
+	return glogger
 }
 
 var glogClient *glogging.Client
@@ -116,7 +117,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 
 	trace := r.Header.Get("X-Cloud-Trace-Context")
 	log.Print("Test request ", trace)
-	setupLogging(trace)
+	glogger := setupLogging(trace)
 
 	var lines []string
 	var ns []*dhttests.Node
@@ -131,8 +132,9 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		lines = append(lines, line)
 	}
 
+	targetContent, err := cid.Decode("QmYdGGwQXpaBGTVWXqMFVXUP2CZhtsV29jxPkRm54ArAdT") // Filecoin proof
 	// targetContent, err := cid.Decode("QmX3g1tW8cZX7fQD9VPFx1zpWNtGDAqX8bse8Hg2Nak9G3") // protocol.ai
-	targetContent, err := cid.Decode("Qmbsb7MMCveTEdfeTjCJPssJmPwbN2jfGyUDSo8oPfk9mB") // ipfs.io
+	// targetContent, err := cid.Decode("Qmbsb7MMCveTEdfeTjCJPssJmPwbN2jfGyUDSo8oPfk9mB") // ipfs.io
 	// targetContent, err := cid.Decode("QmbynpFBGvNygCJQPVKxb8hDmXCumtBPLdiTbSxA8vTE8x") // docs.ipfs.io
 	// targetPeer, err := peer.IDB58Decode("QmScdku7gc3VvfZZvT8kHU77bt6bnH3PnGXkyFRZ17g9EG") // home.jimpick.com
 	// targetPeer, err := peer.IDB58Decode("QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ") // mars.i.ipfs.io
@@ -153,7 +155,8 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		lines = append(lines, line)
 		fmt.Println(line)
 		if err == nil {
-			line := fmt.Sprintf("Number of results: %v", len(addrInfos))
+			numResults := len(addrInfos)
+			line := fmt.Sprintf("Number of results: %v", numResults)
 			lines = append(lines, line)
 			fmt.Println(line)
 			for _, addrInfo := range addrInfos {
@@ -164,6 +167,25 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 					line := fmt.Sprintf("    %v", maddr)
 					lines = append(lines, line)
 					fmt.Println(line)
+				}
+			}
+			if glogger != nil {
+				result := map[string]interface{}{
+					"randomPeerId":     ns[0].Host.ID(),
+					"targetContentCid": targetContent,
+					"duration":         d,
+					"numResults":       numResults,
+					"addrInfos":        addrInfos,
+				}
+				jsonData, err := json.Marshal(result)
+				if err == nil {
+					fmt.Println("JSON:", string(jsonData))
+					glogger.Log(glogging.Entry{
+						Labels: map[string]string{
+							"type": "result",
+						},
+						Payload: json.RawMessage(jsonData),
+					})
 				}
 			}
 		} else {
