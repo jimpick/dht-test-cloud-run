@@ -151,19 +151,19 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		line := fmt.Sprintf("duration: %v", d)
 		lines = append(lines, line)
-		fmt.Printf(line)
+		fmt.Println(line)
 		if err == nil {
 			line := fmt.Sprintf("Number of results: %v", len(addrInfos))
 			lines = append(lines, line)
-			fmt.Printf(line)
+			fmt.Println(line)
 			for _, addrInfo := range addrInfos {
 				line := fmt.Sprintf("  Addr: %v", addrInfo.ID)
 				lines = append(lines, line)
-				fmt.Printf(line)
+				fmt.Println(line)
 				for _, maddr := range addrInfo.Addrs {
 					line := fmt.Sprintf("    %v", maddr)
 					lines = append(lines, line)
-					fmt.Printf(line)
+					fmt.Println(line)
 				}
 			}
 		} else {
